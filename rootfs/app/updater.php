@@ -9,13 +9,13 @@ require_once __DIR__ . '/src/DynDNS.php';
 require_once __DIR__ . '/src/Config.php';
 
 if ('yes' === $_ENV['IPV4']) {
-    $ipv4 = trim(file_get_contents('https://v4.ident.me'));
+    $ipv4 = trim(file_get_contents('http://v4.ident.me'));
 } else {
     $ipv4 = null;
 }
 
 if ('yes' === $_ENV['IPV6']) {
-    $ipv6 = trim(file_get_contents('https://v6.ident.me'));
+    $ipv6 = trim(file_get_contents('http://v6.ident.me'));
 } else {
     $ipv6 = null;
 }

@@ -1,7 +1,12 @@
-name: 'docker'
+name: 'container'
 
 on:
   push:
+    branches:
+      - main
+    tags:
+      - '*'
+  workflow_dispatch:
 
 jobs:
   release:
@@ -16,6 +21,12 @@ jobs:
       - name: Get build time
         uses: 1466587594/get-current-time@v1
         id: current-time
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_IMAGE }},ghcr.io/${{ github.repository }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -44,7 +55,6 @@ jobs:
           push: true
           build-args: |
             BUILD_DATE=${{ steps.current-time.outputs.time }}
+            VERSION=${{ github.ref_name }}
             VCS_REF=${{ env.GITHUB_SHA_SHORT }}
-          tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_IMAGE }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
