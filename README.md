@@ -1,7 +1,7 @@
 # Netcup DNS API DynDNS Docker Client
 
 ![Docker Pulls](https://img.shields.io/docker/pulls/b2un0/netcup-dyndns.svg)
-![Docker Build](https://github.com/b2un0/docker-netcup-dyndns/workflows/container/badge.svg?branch=master&event=push)
+![Docker Build](https://github.com/b2un0/docker-netcup-dyndns/workflows/container/badge.svg?branch=main&event=push)
 ![MicroBadger Size](https://img.shields.io/docker/image-size/b2un0/netcup-dyndns.svg)
 
 ## Credits
