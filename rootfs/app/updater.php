@@ -11,23 +11,23 @@ require_once __DIR__ . '/src/Config.php';
 /**
  * Get IP address with failover support
  * Tries multiple services until one succeeds
+ *
+ * @param array $services List of URLs to try
+ * @param int $filterFlag FILTER_FLAG_IPV4 or FILTER_FLAG_IPV6
  */
-function getIpAddress(array $services): ?string {
+function getIpAddress(array $services, int $filterFlag): ?string {
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+        ],
+    ]);
     foreach ($services as $service) {
-        try {
-            $context = stream_context_create([
-                'http' => [
-                    'timeout' => 5,
-                    'ignore_errors' => false,
-                ],
-            ]);
-            $ip = @file_get_contents($service, false, $context);
-            if ($ip !== false && !empty($ip)) {
-                return trim($ip);
+        $ip = @file_get_contents($service, false, $context);
+        if ($ip !== false) {
+            $ip = trim($ip);
+            if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP, $filterFlag) !== false) {
+                return $ip;
             }
-        } catch (\Exception $e) {
-            // Try next service
-            continue;
         }
     }
     return null;
@@ -41,7 +41,7 @@ if ('yes' === $_ENV['IPV4']) {
         'https://v4.tnedi.me',
         'https://ipv4.wtfismyip.com/text',
     ];
-    $ipv4 = getIpAddress($ipv4Services);
+    $ipv4 = getIpAddress($ipv4Services, FILTER_FLAG_IPV4);
     if (!$ipv4) {
         throw new \RuntimeException('Failed to detect IPv4 address from all services');
     }
@@ -57,7 +57,7 @@ if ('yes' === $_ENV['IPV6']) {
         'https://v6.tnedi.me',
         'https://ipv6.wtfismyip.com/text',
     ];
-    $ipv6 = getIpAddress($ipv6Services);
+    $ipv6 = getIpAddress($ipv6Services, FILTER_FLAG_IPV6);
     if (!$ipv6) {
         throw new \RuntimeException('Failed to detect IPv6 address from all services');
     }
