@@ -53,16 +53,11 @@ final class Config
 
     public function getMatcher(): array
     {
-        switch ($this->mode) {
-            case 'both':
-                return ['@', '*'];
-
-            case '*':
-                return ['*'];
-
-            default:
-                return ['@'];
-        }
+        return match ($this->mode) {
+            'both' => ['@', '*'],
+            '*' => ['*'],
+            default => ['@'],
+        };
     }
 
     /**
