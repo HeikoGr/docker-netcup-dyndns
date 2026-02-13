@@ -11,7 +11,6 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: false  # Workflow deaktiviert - auf 'true' setzen zum Aktivieren
     steps:
       - name: Checkout
         uses: actions/checkout@v3
