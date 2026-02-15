@@ -16,18 +16,24 @@ require_once __DIR__ . '/src/Config.php';
  * @param int $filterFlag FILTER_FLAG_IPV4 or FILTER_FLAG_IPV6
  */
 function getIpAddress(array $services, int $filterFlag): ?string {
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5,
-        ],
-    ]);
     foreach ($services as $service) {
-        $ip = @file_get_contents($service, false, $context);
-        if ($ip !== false) {
-            $ip = trim($ip);
-            if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP, $filterFlag) !== false) {
-                return $ip;
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 5,
+                    'ignore_errors' => false,
+                ],
+            ]);
+            $ip = @file_get_contents($service, false, $context);
+            if ($ip !== false && !empty($ip)) {
+                $ip = trim($ip);
+                if (filter_var($ip, FILTER_VALIDATE_IP, $filterFlag) !== false) {
+                    return $ip;
+                }
             }
+        } catch (\Exception $e) {
+            // Try next service on error
+            continue;
         }
     }
     return null;
