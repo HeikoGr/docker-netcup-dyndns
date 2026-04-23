@@ -34,27 +34,35 @@ final class DynDNS
 
         $this->doLog('api login successful');
 
-        if ($ttl = $this->config->getTtl()) {
-            $zone = $this->client->infoDnsZone($sid, $this->config->getDomain());
+        try {
+            $zoneName = $this->resolveZoneName($sid);
+            $targetHostnames = $this->config->getTargetHostnames($zoneName);
 
-            if ($ttl !== (int)$zone->responsedata->ttl) {
-                $zone->responsedata->ttl = $ttl;
-                $this->client->updateDnsZone($sid, $this->config->getDomain(), $zone->responsedata);
+            $this->doLog(sprintf('managed dns zone resolved to %s', $zoneName));
 
-                $this->doLog(sprintf('ttl for %s set to %s', $this->config->getDomain(), $ttl));
-            } else {
-                $this->doLog(sprintf('ttl for %s already set to %s', $this->config->getDomain(), $ttl));
+            if ($ttl = $this->config->getTtl()) {
+                $zone = $this->client->infoDnsZone($sid, $zoneName);
+
+                if ($ttl !== (int)$zone->responsedata->ttl) {
+                    $zone->responsedata->ttl = $ttl;
+                    $this->client->updateDnsZone($sid, $zoneName, $zone->responsedata);
+
+                    $this->doLog(sprintf('ttl for %s set to %s', $zoneName, $ttl));
+                } else {
+                    $this->doLog(sprintf('ttl for %s already set to %s', $zoneName, $ttl));
+                }
             }
-        }
 
-        $records = $this->client->infoDnsRecords($sid, $this->config->getHostname());
+            $records = $this->client->infoDnsRecords($sid, $zoneName);
 
-        $changes = false;
+            $changes = false;
 
-        foreach ($records->responsedata->dnsrecords as $key => $record) {
-            $recordHostnameReal = (!in_array($record->hostname, $this->config->getMatcher())) ? $record->hostname . '.' . $this->config->getHostname() : $this->config->getHostname();
+            foreach ($records->responsedata->dnsrecords as $record) {
+                if (!in_array($record->hostname, $targetHostnames, true)) {
+                    continue;
+                }
 
-            if ($recordHostnameReal === $this->config->getDomain()) {
+                $fqdn = $this->config->formatHostnameForZone($record->hostname, $zoneName);
 
                 // update A Record if exists and IP has changed
                 if ('A' === $record->type && $this->ipv4 &&
@@ -64,7 +72,7 @@ final class DynDNS
                     )
                 ) {
                     $record->destination = $this->ipv4;
-                    $this->doLog(sprintf('IPv4 for %s set to %s', $record->hostname . '.' . $this->config->getHostname(), $this->ipv4));
+                    $this->doLog(sprintf('IPv4 for %s set to %s', $fqdn, $this->ipv4));
                     $changes = true;
                 }
 
@@ -76,31 +84,53 @@ final class DynDNS
                     )
                 ) {
                     $record->destination = $this->ipv6;
-                    $this->doLog(sprintf('IPv6 for %s set to %s', $record->hostname . '.' . $this->config->getHostname(), $this->ipv6));
+                    $this->doLog(sprintf('IPv6 for %s set to %s', $fqdn, $this->ipv6));
                     $changes = true;
                 }
             }
+
+            if (true === $changes) {
+                $this->client->updateDnsRecords(
+                    $sid,
+                    $zoneName,
+                    $records->responsedata->dnsrecords
+                );
+
+                $this->doLog('dns recordset updated');
+            } else {
+                $this->doLog('dns recordset NOT updated (no changes)');
+            }
+        } finally {
+            try {
+                $this->client->logout($sid);
+                $this->doLog('api logout successful');
+            } catch (\Throwable $exception) {
+                $this->doLog('api logout failed: ' . $exception->getMessage());
+            }
         }
-
-        if (true === $changes) {
-            $this->client->updateDnsRecords(
-                $sid,
-                $this->config->getHostname(),
-                $records->responsedata->dnsrecords
-            );
-
-            $this->doLog('dns recordset updated');
-        } else {
-            $this->doLog('dns recordset NOT updated (no changes)');
-        }
-
-        $this->client->logout($sid);
-
-        $this->doLog('api logout successful');
     }
 
     private function doLog(string $msg)
     {
         printf('%s %s', $msg, PHP_EOL);
+    }
+
+    private function resolveZoneName(string $sid): string
+    {
+        $lastException = null;
+
+        foreach ($this->config->getZoneCandidates() as $candidate) {
+            try {
+                $this->client->infoDnsZone($sid, $candidate);
+                return $candidate;
+            } catch (\RuntimeException $exception) {
+                $lastException = $exception;
+            }
+        }
+
+        throw new \RuntimeException(
+            sprintf('Failed to resolve a managed DNS zone for %s', $this->config->getDomain()),
+            previous: $lastException,
+        );
     }
 }

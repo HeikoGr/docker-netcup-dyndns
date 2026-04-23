@@ -123,26 +123,50 @@ final class Client
     {
         $ch = curl_init(self::APIURL);
 
-        $curlOptions = [
-            CURLOPT_POST => 1,
-            CURLOPT_RETURNTRANSFER => 1,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS => json_encode($request, JSON_THROW_ON_ERROR),
-        ];
+        if ($ch === false) {
+            throw new \RuntimeException('Failed to initialize cURL');
+        }
 
-        curl_setopt_array($ch, $curlOptions);
+        try {
+            $curlOptions = [
+                CURLOPT_POST => 1,
+                CURLOPT_RETURNTRANSFER => 1,
+                CURLOPT_HTTPHEADER => [
+                    'Accept: application/json',
+                    'Content-Type: application/json',
+                ],
+                CURLOPT_POSTFIELDS => json_encode($request, JSON_THROW_ON_ERROR),
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_TIMEOUT => 15,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_USERAGENT => 'docker-netcup-dyndns/1.0',
+            ];
 
-        $result = curl_exec($ch);
+            curl_setopt_array($ch, $curlOptions);
 
-        if ($result === false) {
-            $error = curl_error($ch);
-            throw new \RuntimeException('cURL error: ' . $error);
+            $result = curl_exec($ch);
+
+            if ($result === false) {
+                $error = curl_error($ch);
+                throw new \RuntimeException('cURL error: ' . $error);
+            }
+
+            $statusCode = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new \RuntimeException(sprintf('Unexpected HTTP status code: %d', $statusCode));
+            }
+        } finally {
+            curl_close($ch);
         }
 
         $response = json_decode($result, false, 512, JSON_THROW_ON_ERROR);
 
-        if (2000 !== $response->statuscode) {
-            throw new \RuntimeException($response->longmessage);
+        if (!isset($response->statuscode, $response->longmessage)) {
+            throw new \RuntimeException('Unexpected API response payload');
+        }
+
+        if (2000 !== (int) $response->statuscode) {
+            throw new \RuntimeException((string) $response->longmessage);
         }
 
         return $response;
