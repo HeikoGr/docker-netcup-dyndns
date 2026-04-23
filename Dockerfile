@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY rootfs/app/composer.json rootfs/app/composer.lock ./
 
-RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --classmap-authoritative
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --classmap-authoritative --ignore-platform-req=php
 
 FROM php:8.4-cli-alpine3.23
 

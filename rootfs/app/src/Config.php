@@ -27,9 +27,24 @@ final class Config
 
     public function __construct(string $domain, string $mode, int $customerId, string $apiKey, string $apiPassword, int $ttl, bool $force = false)
     {
+        $domain = trim($domain);
+        $domain = rtrim($domain, '.');
+
         if ($domain === '') {
             throw new \InvalidArgumentException('Domain must not be empty');
         }
+
+        if (function_exists('idn_to_ascii')) {
+            $asciiDomain = idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46);
+
+            if ($asciiDomain === false) {
+                throw new \InvalidArgumentException('Domain must be a valid domain name');
+            }
+
+            $domain = $asciiDomain;
+        }
+
+        $domain = strtolower($domain);
 
         if (substr_count($domain, '.') < 1) {
             throw new \InvalidArgumentException('DOMAIN must contain at least one dot');
@@ -86,9 +101,7 @@ final class Config
         $candidates = [];
 
         $registrableDomain = $this->getRegistrableDomainCandidate();
-        if ($registrableDomain !== null) {
-            $candidates[] = $registrableDomain;
-        }
+        $candidates[] = $registrableDomain;
 
         $labels = explode('.', $this->domain);
 
@@ -140,15 +153,25 @@ final class Config
         return $this->force;
     }
 
-    private function getRegistrableDomainCandidate(): ?string
+    private function getRegistrableDomainCandidate(): string
     {
         try {
             $resolvedDomain = self::getRules()->resolve(Domain::fromIDNA2008($this->domain));
             $registrableDomain = trim($resolvedDomain->registrableDomain()->toString(), '.');
 
-            return $registrableDomain !== '' ? strtolower($registrableDomain) : null;
-        } catch (\Throwable) {
-            return null;
+            if ($registrableDomain === '') {
+                throw new \InvalidArgumentException(
+                    sprintf('Invalid domain "%s": unable to determine registrable domain.', $this->domain)
+                );
+            }
+
+            return $registrableDomain;
+        } catch (\Throwable $e) {
+            throw new \InvalidArgumentException(
+                sprintf('Invalid domain "%s": unable to parse or resolve registrable domain.', $this->domain),
+                0,
+                $e
+            );
         }
     }
 
