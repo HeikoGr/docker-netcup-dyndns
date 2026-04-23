@@ -1,4 +1,12 @@
-FROM php:8-cli-alpine
+FROM composer:2 AS composer-deps
+
+WORKDIR /app
+
+COPY rootfs/app/composer.json rootfs/app/composer.lock ./
+
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --classmap-authoritative --ignore-platform-req=php
+
+FROM php:8.4-cli-alpine3.23
 
 ENV SCHEDULE="*/10 * * * *" \
     CRON_CMD="php /app/updater.php" \
@@ -7,15 +15,11 @@ ENV SCHEDULE="*/10 * * * *" \
     IPV4="yes" \
     IPV6="no" \
     TTL="0" \
-    CUSTOMER_ID="" \
-    API_KEY="" \
-    API_PASSWORD="" \
     FORCE="no"
 
-ADD rootfs/ /
+COPY rootfs/ /
+COPY --from=composer-deps /app/vendor /app/vendor
 
 ENTRYPOINT ["/entrypoint.sh"]
 
 CMD ["/usr/sbin/crond", "-f"]
-
-SHELL ["/bin/ash"]

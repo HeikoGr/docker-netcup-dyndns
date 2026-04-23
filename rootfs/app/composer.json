@@ -1,0 +1,13 @@
+{
+    "name": "heikogr/docker-netcup-dyndns",
+    "type": "project",
+    "require": {
+        "ext-curl": "*",
+        "jeremykendall/php-domain-parser": "^6.4",
+        "php": "^8.4",
+        "symfony/polyfill-intl-idn": "^1.31"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
