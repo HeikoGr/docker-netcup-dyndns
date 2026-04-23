@@ -121,10 +121,11 @@ final class Client
 
     private function request(array $request): ?object
     {
+        $action = (string)($request['action'] ?? 'unknown');
         $ch = curl_init(self::APIURL);
 
         if ($ch === false) {
-            throw new \RuntimeException('Failed to initialize cURL');
+            throw new \RuntimeException(sprintf('Failed to initialize cURL for %s', $action));
         }
 
         try {
@@ -148,25 +149,29 @@ final class Client
 
             if ($result === false) {
                 $error = curl_error($ch);
-                throw new \RuntimeException('cURL error: ' . $error);
+                throw new \RuntimeException(sprintf('cURL error during %s: %s', $action, $error));
             }
 
             $statusCode = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
             if ($statusCode < 200 || $statusCode >= 300) {
-                throw new \RuntimeException(sprintf('Unexpected HTTP status code: %d', $statusCode));
+                throw new \RuntimeException(sprintf('Unexpected HTTP status code during %s: %d', $action, $statusCode));
             }
         } finally {
             curl_close($ch);
         }
 
-        $response = json_decode($result, false, 512, JSON_THROW_ON_ERROR);
+        try {
+            $response = json_decode($result, false, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new \RuntimeException(sprintf('Invalid JSON response during %s: %s', $action, $exception->getMessage()), previous: $exception);
+        }
 
         if (!isset($response->statuscode, $response->longmessage)) {
-            throw new \RuntimeException('Unexpected API response payload');
+            throw new \RuntimeException(sprintf('Unexpected API response payload during %s', $action));
         }
 
         if (2000 !== (int) $response->statuscode) {
-            throw new \RuntimeException((string) $response->longmessage);
+            throw new \RuntimeException(sprintf('API %s failed: %s', $action, (string) $response->longmessage));
         }
 
         return $response;

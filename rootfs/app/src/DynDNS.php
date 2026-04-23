@@ -54,13 +54,17 @@ final class DynDNS
             }
 
             $records = $this->client->infoDnsRecords($sid, $zoneName);
+            $this->doLog(sprintf('loaded %d DNS records from zone %s', count($records->responsedata->dnsrecords), $zoneName));
 
             $changes = false;
+            $matchingRecords = 0;
 
             foreach ($records->responsedata->dnsrecords as $record) {
                 if (!in_array($record->hostname, $targetHostnames, true)) {
                     continue;
                 }
+
+                $matchingRecords++;
 
                 $fqdn = $this->config->formatHostnameForZone($record->hostname, $zoneName);
 
@@ -89,6 +93,10 @@ final class DynDNS
                 }
             }
 
+            if ($matchingRecords === 0) {
+                $this->doLog(sprintf('no matching DNS records found in zone %s for hostnames %s', $zoneName, implode(', ', $targetHostnames)), 'WARNING');
+            }
+
             if (true === $changes) {
                 $this->client->updateDnsRecords(
                     $sid,
@@ -98,21 +106,21 @@ final class DynDNS
 
                 $this->doLog('dns recordset updated');
             } else {
-                $this->doLog('dns recordset NOT updated (no changes)');
+                $this->doLog(sprintf('dns recordset not updated (%d matching records, no changes)', $matchingRecords));
             }
         } finally {
             try {
                 $this->client->logout($sid);
                 $this->doLog('api logout successful');
             } catch (\Throwable $exception) {
-                $this->doLog('api logout failed: ' . $exception->getMessage());
+                $this->doLog('api logout failed: ' . $exception->getMessage(), 'ERROR');
             }
         }
     }
 
-    private function doLog(string $msg)
+    private function doLog(string $msg, string $level = 'INFO')
     {
-        printf('%s %s', $msg, PHP_EOL);
+        printf('%s [%s] [dyndns] %s%s', gmdate('Y-m-d\TH:i:s\Z'), $level, $msg, PHP_EOL);
     }
 
     private function resolveZoneName(string $sid): string

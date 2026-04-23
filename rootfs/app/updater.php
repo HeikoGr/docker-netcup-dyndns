@@ -14,6 +14,10 @@ require_once __DIR__ . '/src/Client.php';
 require_once __DIR__ . '/src/DynDNS.php';
 require_once __DIR__ . '/src/Config.php';
 
+function logMessage(string $level, string $message): void {
+    printf('%s [%s] [updater] %s%s', gmdate('Y-m-d\TH:i:s\Z'), $level, $message, PHP_EOL);
+}
+
 /**
  * Get IP address with failover support
  * Tries multiple services until one succeeds
@@ -84,6 +88,8 @@ if ('yes' === $_ENV['IPV4']) {
     if (!$ipv4) {
         throw new \RuntimeException('Failed to detect IPv4 address from all services');
     }
+
+    logMessage('INFO', sprintf('detected public IPv4: %s', $ipv4));
 } else {
     $ipv4 = null;
 }
@@ -100,22 +106,42 @@ if ('yes' === $_ENV['IPV6']) {
     if (!$ipv6) {
         throw new \RuntimeException('Failed to detect IPv6 address from all services');
     }
+
+    logMessage('INFO', sprintf('detected public IPv6: %s', $ipv6));
 } else {
     $ipv6 = null;
 }
 
-if (!$ipv4 && !$ipv6) {
-    throw new \UnexpectedValueException('ehm?');
+try {
+    if (!$ipv4 && !$ipv6) {
+        throw new \UnexpectedValueException('Neither IPv4 nor IPv6 is enabled or detectable');
+    }
+
+    $config = new Config(
+        getRequiredEnv('DOMAIN'),
+        (string) ($_ENV['MODE'] ?? '@'),
+        getRequiredIntEnv('CUSTOMER_ID'),
+        getRequiredEnv('API_KEY'),
+        getRequiredEnv('API_PASSWORD'),
+        (int) ($_ENV['TTL'] ?? 0),
+        'yes' === ($_ENV['FORCE'] ?? 'no'),
+    );
+
+    logMessage(
+        'INFO',
+        sprintf(
+            'starting update domain=%s mode=%s ipv4=%s ipv6=%s ttl=%d force=%s',
+            $config->getDomain(),
+            (string) ($_ENV['MODE'] ?? '@'),
+            $ipv4 ?? 'disabled',
+            $ipv6 ?? 'disabled',
+            (int) ($_ENV['TTL'] ?? 0),
+            ($_ENV['FORCE'] ?? 'no')
+        )
+    );
+
+    (new DynDNS($config, $ipv4, $ipv6))->update();
+} catch (\Throwable $exception) {
+    logMessage('ERROR', $exception->getMessage());
+    exit(1);
 }
-
-$config = new Config(
-    getRequiredEnv('DOMAIN'),
-    (string) ($_ENV['MODE'] ?? '@'),
-    getRequiredIntEnv('CUSTOMER_ID'),
-    getRequiredEnv('API_KEY'),
-    getRequiredEnv('API_PASSWORD'),
-    (int) ($_ENV['TTL'] ?? 0),
-    'yes' === ($_ENV['FORCE'] ?? 'no'),
-);
-
-(new DynDNS($config, $ipv4, $ipv6))->update();
