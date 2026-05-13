@@ -25,7 +25,6 @@ final class DynDNS
             $config->getApiKey(),
             $config->getApiPassword(),
         );
-
     }
 
     public function update(): void
@@ -43,7 +42,7 @@ final class DynDNS
             if ($ttl = $this->config->getTtl()) {
                 $zone = $this->client->infoDnsZone($sid, $zoneName);
 
-                if ($ttl !== (int)$zone->responsedata->ttl) {
+                if ($ttl !== (int) $zone->responsedata->ttl) {
                     $zone->responsedata->ttl = $ttl;
                     $this->client->updateDnsZone($sid, $zoneName, $zone->responsedata);
 

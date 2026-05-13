@@ -157,7 +157,6 @@ final class Client
                 throw new \RuntimeException(sprintf('Unexpected HTTP status code during %s: %d', $action, $statusCode));
             }
         } finally {
-            curl_close($ch);
         }
 
         try {

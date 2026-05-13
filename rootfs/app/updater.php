@@ -76,7 +76,8 @@ try {
     exit(1);
 }
 
-function logMessage(string $level, string $message): void {
+function logMessage(string $level, string $message): void
+{
     printf('%s [%s] [updater] %s%s', gmdate('Y-m-d\TH:i:s\Z'), $level, $message, PHP_EOL);
 }
 
@@ -89,7 +90,8 @@ function logMessage(string $level, string $message): void {
  * @param int $curlIpResolve CURL_IPRESOLVE_V4 or CURL_IPRESOLVE_V6
  * @param int $filterFlag FILTER_FLAG_IPV4 or FILTER_FLAG_IPV6
  */
-function getIpAddress(array $services, string $protocolLabel, int $curlIpResolve, int $filterFlag): string {
+function getIpAddress(array $services, string $protocolLabel, int $curlIpResolve, int $filterFlag): string
+{
     $lastError = null;
 
     foreach ($services as $service) {
@@ -113,11 +115,8 @@ function getIpAddress(array $services, string $protocolLabel, int $curlIpResolve
         $ip = curl_exec($ch);
         if ($ip === false) {
             $lastError = sprintf('%s returned: %s', $service, curl_error($ch) ?: 'unknown cURL error');
-            // curl_close($ch);
             continue;
         }
-
-        // curl_close($ch);
 
         $ip = trim($ip);
         if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP, $filterFlag) !== false) {
@@ -135,7 +134,8 @@ function getIpAddress(array $services, string $protocolLabel, int $curlIpResolve
     ));
 }
 
-function getRequiredEnv(string $name): string {
+function getRequiredEnv(string $name): string
+{
     $value = trim((string) ($_ENV[$name] ?? ''));
     if ($value === '') {
         throw new \InvalidArgumentException(sprintf('Missing required environment variable: %s', $name));
@@ -144,7 +144,8 @@ function getRequiredEnv(string $name): string {
     return $value;
 }
 
-function getRequiredIntEnv(string $name): int {
+function getRequiredIntEnv(string $name): int
+{
     $value = getRequiredEnv($name);
     if (!ctype_digit($value)) {
         throw new \InvalidArgumentException(sprintf('Environment variable %s must be an unsigned integer', $name));

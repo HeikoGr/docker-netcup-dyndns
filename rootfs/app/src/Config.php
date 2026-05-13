@@ -25,8 +25,15 @@ final class Config
 
     private bool $force;
 
-    public function __construct(string $domain, string $mode, int $customerId, string $apiKey, string $apiPassword, int $ttl, bool $force = false)
-    {
+    public function __construct(
+        string $domain,
+        string $mode,
+        int $customerId,
+        string $apiKey,
+        string $apiPassword,
+        int $ttl,
+        bool $force = false,
+    ) {
         $domain = trim($domain);
         $domain = rtrim($domain, '.');
 
