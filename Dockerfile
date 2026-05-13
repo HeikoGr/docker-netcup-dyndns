@@ -6,7 +6,7 @@ COPY rootfs/app/composer.json rootfs/app/composer.lock ./
 
 RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --classmap-authoritative --ignore-platform-req=php
 
-FROM php:8.4-cli-alpine3.23
+FROM php:8.5-cli-alpine3.23
 
 ENV SCHEDULE="*/10 * * * *" \
     CRON_CMD="php /app/updater.php" \
