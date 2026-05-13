@@ -113,11 +113,11 @@ function getIpAddress(array $services, string $protocolLabel, int $curlIpResolve
         $ip = curl_exec($ch);
         if ($ip === false) {
             $lastError = sprintf('%s returned: %s', $service, curl_error($ch) ?: 'unknown cURL error');
-            curl_close($ch);
+            // curl_close($ch);
             continue;
         }
 
-        curl_close($ch);
+        // curl_close($ch);
 
         $ip = trim($ip);
         if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP, $filterFlag) !== false) {
