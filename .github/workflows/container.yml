@@ -11,6 +11,9 @@ on:
       - dev
     tags:
       - '*'
+  schedule:
+    # GitHub Actions cron uses UTC. 09:00 UTC is 11:00 in Germany during DST.
+    - cron: '0 9 * * 6'
   workflow_dispatch:
 
 env:
