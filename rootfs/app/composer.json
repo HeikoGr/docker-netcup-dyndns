@@ -4,8 +4,8 @@
     "require": {
         "ext-curl": "*",
         "jeremykendall/php-domain-parser": "^6.4",
-        "php": "^8.4",
-        "symfony/polyfill-intl-idn": "^1.31"
+        "php": "^8.5",
+        "symfony/polyfill-intl-idn": "^1.38"
     },
     "config": {
         "sort-packages": true

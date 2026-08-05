@@ -17,7 +17,14 @@ if [ -n "${SCHEDULE:-}" ] || [ -n "${CRON_CMD:-}" ]; then
   fi
 
   log "INFO" "configure cron schedule=${SCHEDULE} command=${CRON_CMD}"
-  printf '%s\n' "@reboot ${CRON_CMD}" "${SCHEDULE} ${CRON_CMD}" > /etc/crontabs/root
+  printf '%s\n' "${SCHEDULE} ${CRON_CMD}" > /etc/crontabs/root
+
+  log "INFO" "initial run"
+  if sh -c "${CRON_CMD}"; then
+    log "INFO" "initial run finished successfully"
+  else
+    log "ERROR" "initial run failed, continuing with cron"
+  fi
 fi
 
 log "INFO" "run: $*"
