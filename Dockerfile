@@ -8,6 +8,12 @@ RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --cla
 
 FROM php:8.6-cli-alpine
 
+# PHP 8.6 images no longer ship mbstring; symfony/polyfill-intl-idn needs it (mb_chr)
+RUN apk add --no-cache oniguruma \
+    && apk add --no-cache --virtual .mbstring-build oniguruma-dev \
+    && docker-php-ext-install mbstring \
+    && apk del .mbstring-build
+
 ENV SCHEDULE="*/10 * * * *" \
     CRON_CMD="php /app/updater.php" \
     DOMAIN="" \
