@@ -47,30 +47,50 @@ try {
         throw new \UnexpectedValueException('Neither IPv4 nor IPv6 is enabled or detectable');
     }
 
-    $config = new Config(
-        getRequiredEnv('DOMAIN'),
-        (string) ($_ENV['MODE'] ?? '@'),
-        getRequiredIntEnv('CUSTOMER_ID'),
-        getRequiredEnv('API_KEY'),
-        getRequiredEnv('API_PASSWORD'),
-        (int) ($_ENV['TTL'] ?? 0),
-        'yes' === ($_ENV['FORCE'] ?? 'no'),
-    );
+    // DOMAIN may hold several domains separated by commas or whitespace, e.g. "example.org, example.net".
+    // The public IP is detected once; every domain is updated on its own so one failing zone does not
+    // block the others.
+    $domains = preg_split('/[\s,]+/', getRequiredEnv('DOMAIN'), -1, PREG_SPLIT_NO_EMPTY);
+    $mode = (string) ($_ENV['MODE'] ?? '@');
+    $ttl = (int) ($_ENV['TTL'] ?? 0);
+    $force = (string) ($_ENV['FORCE'] ?? 'no');
+    $failed = [];
 
-    logMessage(
-        'INFO',
-        sprintf(
-            'starting update domain=%s mode=%s ipv4=%s ipv6=%s ttl=%d force=%s',
-            $config->getDomain(),
-            (string) ($_ENV['MODE'] ?? '@'),
-            $ipv4 ?? 'disabled',
-            $ipv6 ?? 'disabled',
-            (int) ($_ENV['TTL'] ?? 0),
-            ($_ENV['FORCE'] ?? 'no')
-        )
-    );
+    foreach ($domains as $domain) {
+        try {
+            $config = new Config(
+                $domain,
+                $mode,
+                getRequiredIntEnv('CUSTOMER_ID'),
+                getRequiredEnv('API_KEY'),
+                getRequiredEnv('API_PASSWORD'),
+                $ttl,
+                'yes' === $force,
+            );
 
-    (new DynDNS($config, $ipv4, $ipv6))->update();
+            logMessage(
+                'INFO',
+                sprintf(
+                    'starting update domain=%s mode=%s ipv4=%s ipv6=%s ttl=%d force=%s',
+                    $config->getDomain(),
+                    $mode,
+                    $ipv4 ?? 'disabled',
+                    $ipv6 ?? 'disabled',
+                    $ttl,
+                    $force
+                )
+            );
+
+            (new DynDNS($config, $ipv4, $ipv6))->update();
+        } catch (\Throwable $exception) {
+            logMessage('ERROR', sprintf('domain=%s: %s', $domain, $exception->getMessage()));
+            $failed[] = $domain;
+        }
+    }
+
+    if ($failed !== []) {
+        throw new \RuntimeException(sprintf('update failed for: %s', implode(', ', $failed)));
+    }
 } catch (\Throwable $exception) {
     logMessage('ERROR', $exception->getMessage());
     exit(1);
