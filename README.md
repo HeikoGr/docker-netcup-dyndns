@@ -28,7 +28,7 @@ services:
         network_mode: host # usually required for IPv6 unless Docker itself is configured for dual-stack
         environment:
             SCHEDULE: "*/10 * * * *" # https://crontab.guru/
-            DOMAIN: "nas.domain.tld"
+            DOMAIN: "nas.domain.tld" # several domains: "nas.domain.tld, other.tld"
             MODE: "both" # can be "@", "*" or "both"
             IPV4: "yes"
             IPV6: "yes"
